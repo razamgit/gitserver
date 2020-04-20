@@ -13,4 +13,14 @@
   <listener>
     <listener-class>org.scalatra.servlet.ScalatraListener</listener-class>
   </listener>
+
+  <servlet>
+    <servlet-name>GitRepositoryServlet</servlet-name>
+    <servlet-class>rz.GitRepositoryServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>GitRepositoryServlet</servlet-name>
+    <url-pattern>/git/*</url-pattern>
+  </servlet-mapping>
 </web-app>
