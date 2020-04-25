@@ -1,22 +1,15 @@
 package rz
 
 import java.io.File
-import java.util
-import java.util.Date
 
-import scala.util.Using
-
-import org.eclipse.jgit.api.Git
+import javax.servlet.ServletConfig
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.eclipse.jgit.http.server.GitServlet
+import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.transport._
 import org.eclipse.jgit.transport.resolver._
 import org.slf4j.LoggerFactory
-import javax.servlet.ServletConfig
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import org.eclipse.jgit.diff.DiffEntry.ChangeType
-import org.eclipse.jgit.internal.storage.file.FileRepository
-import org.json4s.jackson.Serialization._
 
 /**
  * Provides Git repository via HTTP.
@@ -24,18 +17,31 @@ import org.json4s.jackson.Serialization._
  * This servlet provides only Git repository functionality.
  * Authentication is provided by [[GitAuthenticationFilter]].
  */
-class GitRepositoryServlet extends GitServlet with SystemSettingsService {
+class GitRepositoryServlet extends GitServlet {
 
   private val logger = LoggerFactory.getLogger(classOf[GitRepositoryServlet])
-  private implicit val jsonFormats = gitbucket.core.api.JsonFormat.jsonFormats
+//  private implicit val jsonFormats = gitbucket.core.api.JsonFormat.jsonFormats
+  private val HttpProtocols = Vector("http", "https")
 
   override def init(config: ServletConfig): Unit = {
     setReceivePackFactory(new RzReceivePackFactory())
 
-    val root: File = new File(Directory.RepositoryHome)
     setRepositoryResolver(new RzRepositoryResolver)
 
     super.init(config)
+  }
+
+  def parseBaseUrl(req: HttpServletRequest): String = {
+    val url = req.getRequestURL.toString
+    val path = req.getRequestURI
+    val contextPath = req.getContextPath
+    val len = url.length - path.length + contextPath.length
+
+    val base = url.substring(0, len).stripSuffix("/")
+    Option(req.getHeader("X-Forwarded-Proto"))
+      .map(_.toLowerCase())
+      .filter(HttpProtocols.contains)
+      .fold(base)(_ + base.dropWhile(_ != ':'))
   }
 
   override def service(req: HttpServletRequest, res: HttpServletResponse): Unit = {
@@ -44,12 +50,8 @@ class GitRepositoryServlet extends GitServlet with SystemSettingsService {
     if (index >= 0 && (agent == null || agent.toLowerCase.indexOf("git") < 0)) {
       // redirect for browsers
       val paths = req.getRequestURI.substring(0, index).split("/")
-      res.sendRedirect(baseUrl(req) + "/" + paths.dropRight(1).last + "/" + paths.last)
+      res.sendRedirect(parseBaseUrl(req) + "/" + paths.dropRight(1).last + "/" + paths.last)
 
-    } else if (req.getMethod.toUpperCase == "POST" && req.getRequestURI.endsWith("/info/lfs/objects/batch")) {
-      withLockRepository(req) {
-        serviceGitLfsBatchAPI(req, res)
-      }
     } else {
       // response for git client
       withLockRepository(req) {
@@ -59,8 +61,8 @@ class GitRepositoryServlet extends GitServlet with SystemSettingsService {
   }
 
   private def withLockRepository[T](req: HttpServletRequest)(f: => T): T = {
-    if (req.hasAttribute(Keys.Request.RepositoryLockKey)) {
-      LockUtil.lock(req.getAttribute(Keys.Request.RepositoryLockKey).asInstanceOf[String]) {
+    if (req.getAttribute("REPOSITORY_LOCK_KEY") != null) {
+      RepoLock.lock(req.getAttribute("REPOSITORY_LOCK_KEY").asInstanceOf[String]) {
         f
       }
     } else {
@@ -70,50 +72,19 @@ class GitRepositoryServlet extends GitServlet with SystemSettingsService {
 }
 
 class RzRepositoryResolver extends RepositoryResolver[HttpServletRequest] {
-
+  val appConfig = AppConfig.load
   override def open(req: HttpServletRequest, name: String): Repository = {
-    // Rewrite repository path if routing is marched
-    PluginRegistry()
-      .getRepositoryRouting("/" + name)
-      .map {
-        case GitRepositoryRouting(urlPattern, localPath, _) =>
-          val path = urlPattern.r.replaceFirstIn(name, localPath)
-          new FileRepository(new File(Directory.GitBucketHome, path))
-      }
-      .getOrElse {
-        new FileRepository(new File(Directory.RepositoryHome, name))
-      }
+    new FileRepository(new File(appConfig.gitDirectory, name))
   }
 
 }
 
-class RzReceivePackFactory extends ReceivePackFactory[HttpServletRequest] with SystemSettingsService {
+class RzReceivePackFactory extends ReceivePackFactory[HttpServletRequest] {
 
   private val logger = LoggerFactory.getLogger(classOf[RzReceivePackFactory])
 
   override def create(request: HttpServletRequest, db: Repository): ReceivePack = {
     val receivePack = new ReceivePack(db)
-
-    if (PluginRegistry().getRepositoryRouting(request.gitRepositoryPath).isEmpty) {
-      val pusher = request.getAttribute(Keys.Request.UserName).asInstanceOf[String]
-
-      logger.debug("requestURI: " + request.getRequestURI)
-      logger.debug("pusher:" + pusher)
-
-      defining(request.paths) { paths =>
-        val owner = paths(1)
-        val repository = paths(2).stripSuffix(".git")
-
-        logger.debug("repository:" + owner + "/" + repository)
-
-        val settings = loadSystemSettings()
-        val baseUrl = settings.baseUrl(request)
-        val sshUrl = settings.sshAddress.map { x =>
-          s"${x.genericUser}@${x.host}:${x.port}"
-        }
-      }
-    }
-
     receivePack
   }
 }
