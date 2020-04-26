@@ -49,3 +49,8 @@ object AppConfig {
   }
 }
 
+object DatabaseConfig {
+  val jdbcDriver = "org.postgresql.Driver2"
+  val slickDriver = slick.jdbc.PostgresProfile
+
+}
