@@ -48,9 +48,3 @@ object AppConfig {
     AppConfig(port, webBase, gitDirectory, env)
   }
 }
-
-object DatabaseConfig {
-  val jdbcDriver = "org.postgresql.Driver2"
-  val slickDriver = slick.jdbc.PostgresProfile
-
-}

@@ -1,6 +1,8 @@
-import rz._
+import java.util
+
+import javax.servlet.{DispatcherType, ServletContext}
 import org.scalatra._
-import javax.servlet.ServletContext
+import rz._
 
 class ScalatraBootstrap extends LifeCycle {
   override def init(context: ServletContext): Unit = {
@@ -10,5 +12,10 @@ class ScalatraBootstrap extends LifeCycle {
     if (!dir.exists) {
       dir.mkdirs()
     }
+
+    context.addFilter("gitAuthenticationFilter", new GitAuthFilter)
+    context
+      .getFilterRegistration("gitAuthenticationFilter")
+      .addMappingForUrlPatterns(util.EnumSet.allOf(classOf[DispatcherType]), true, "/git/*")
   }
 }

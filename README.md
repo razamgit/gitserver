@@ -8,5 +8,4 @@ Git server implemented using Scalatra and JGit.
 $ cd rzgitserver
 $ sbt
 > jetty:start
-> browse
 ```

@@ -1,6 +1,7 @@
 package rz
 
 import java.util.Base64
+import org.mindrot.jbcrypt.BCrypt
 
 import javax.servlet.http.HttpServletResponse
 
@@ -20,5 +21,9 @@ object Auth {
     } catch {
       case _: Throwable => ""
     }
+  }
+
+  def checkHash(str: String, strHashed: String): Boolean = {
+    BCrypt.checkpw(str, strHashed)
   }
 }

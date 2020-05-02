@@ -14,9 +14,7 @@ case class GitRepositoryRouting(urlPattern: String, localPath: String, filter: G
       urlPattern,
       localPath,
       new GitRepositoryFilter() {
-        def filter(repositoryName: String, userName: Option[String], settings: AppConfig, isUpdating: Boolean)(
-          implicit session: Session
-        ): Boolean = true
+        def filter(repositoryName: String, userName: Option[String], settings: AppConfig, isUpdating: Boolean): Boolean = true
       }
     )
   }
@@ -27,7 +25,6 @@ case class GitRepositoryRouting(urlPattern: String, localPath: String, filter: G
  * Filters request to plug-in served repository. This is used to provide authentication mainly.
  */
 trait GitRepositoryFilter {
-  type Session = slick.jdbc.JdbcBackend#Session
   /**
    * Filters request to Git repository. If this method returns true then request is accepted.
    *
@@ -35,11 +32,8 @@ trait GitRepositoryFilter {
    * @param userName the authenticated user name or None
    * @param settings the system settings
    * @param isUpdating true if update request, otherwise false
-   * @param session the database session
    * @return true if allow accessing to repository, otherwise false.
    */
-  def filter(path: String, userName: Option[String], settings: AppConfig, isUpdating: Boolean)(
-    implicit session: Session
-  ): Boolean
+  def filter(path: String, userName: Option[String], settings: AppConfig, isUpdating: Boolean): Boolean
 
 }
