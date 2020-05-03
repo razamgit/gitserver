@@ -1,20 +1,14 @@
-package rz
+package services
 
 import java.util.Base64
-import org.mindrot.jbcrypt.BCrypt
 
 import javax.servlet.http.HttpServletResponse
-
+import org.mindrot.jbcrypt.BCrypt
 
 /**
  * Provides HTTP (Basic) Authentication related functions.
  */
-object Auth {
-  def requireAuth(response: HttpServletResponse): Unit = {
-    response.setHeader("WWW-Authenticate", "BASIC realm=\"razam\"")
-    response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
-  }
-
+object EncryptionService {
   def decodeAuthHeader(header: String): String = {
     try {
       new String(Base64.getDecoder.decode(header.substring(6)))

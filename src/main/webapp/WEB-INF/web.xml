@@ -16,7 +16,7 @@
 
   <servlet>
     <servlet-name>GitRepositoryServlet</servlet-name>
-    <servlet-class>rz.GitRepositoryServlet</servlet-class>
+    <servlet-class>git.GitRepositoryServlet</servlet-class>
   </servlet>
 
   <servlet-mapping>

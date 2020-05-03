@@ -1,24 +1,21 @@
-package rz
+package models
 
 import java.sql.Connection
 
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
+import services.PgConfig
 
-/**
- * Lots of this is stolen from Play.
- */
-class DB {
+class Database(pgConfig: PgConfig) {
 
   private val dataSource: HikariDataSource = {
     val config = new HikariConfig()
-    config.setDriverClassName("org.postgresql.Driver")
-    config.setJdbcUrl("jdbc:postgresql://localhost/razam")
-    config.setUsername("razam")
-    config.setPassword("razam")
-    config.addDataSourceProperty("cachePrepStmts", "true")
-    config.addDataSourceProperty("prepStmtCacheSize", "250")
-    config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
+    config.setDriverClassName(PgConfig.pgDriver)
+    config.setJdbcUrl(s"${PgConfig.jdbcPgPrefix}${pgConfig.host}:${pgConfig.port}/${pgConfig.dbname}")
+    config.setUsername(pgConfig.user)
+    config.setPassword(pgConfig.password)
     config.setAutoCommit(false)
+    config.setMaximumPoolSize(pgConfig.maxPoolSize)
+    config.setReadOnly(true)
 
     new HikariDataSource(config)
   }

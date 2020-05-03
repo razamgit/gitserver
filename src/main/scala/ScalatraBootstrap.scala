@@ -2,7 +2,8 @@ import java.util
 
 import javax.servlet.{DispatcherType, ServletContext}
 import org.scalatra._
-import rz._
+import git._
+import services.AppConfig
 
 class ScalatraBootstrap extends LifeCycle {
   override def init(context: ServletContext): Unit = {
