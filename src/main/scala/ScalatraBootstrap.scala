@@ -1,6 +1,6 @@
 import java.util
 
-import javax.servlet.{DispatcherType, ServletContext}
+import javax.servlet.{ DispatcherType, ServletContext }
 import org.scalatra._
 import git._
 import services.AppConfig

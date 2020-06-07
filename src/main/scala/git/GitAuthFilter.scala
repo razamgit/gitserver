@@ -2,17 +2,17 @@ package git
 
 import javax.servlet._
 import javax.servlet.http._
-import models.{Database, RzRepository}
+import models.{ Database, RzRepository }
 import org.slf4j.LoggerFactory
-import services.{AppConfig, EncryptionService, GitHttpService}
+import services.{ AppConfig, EncryptionService, GitHttpService }
 
 /**
  * Provides BASIC Authentication for [[GitRepositoryServlet]].
  */
 class GitAuthFilter extends Filter {
   val appConfig: AppConfig = AppConfig.load
-  val db = new Database(appConfig.db)
-  val rzRepository = new RzRepository(db)
+  val db                   = new Database(appConfig.db)
+  val rzRepository         = new RzRepository(db)
 
   private val logger = LoggerFactory.getLogger(classOf[GitAuthFilter])
 
@@ -26,7 +26,7 @@ class GitAuthFilter extends Filter {
   }
 
   def doFilter(req: ServletRequest, res: ServletResponse, chain: FilterChain): Unit = {
-    val request = req.asInstanceOf[HttpServletRequest]
+    val request  = req.asInstanceOf[HttpServletRequest]
     val response = res.asInstanceOf[HttpServletResponse]
 
     val wrappedResponse = new HttpServletResponseWrapper(response) {
@@ -46,12 +46,12 @@ class GitAuthFilter extends Filter {
   }
 
   private def defaultRepository(
-                                 request: HttpServletRequest,
-                                 response: HttpServletResponse,
-                                 chain: FilterChain,
-                                 settings: AppConfig,
-                                 isUpdating: Boolean
-                               ): Unit = {
+    request: HttpServletRequest,
+    response: HttpServletResponse,
+    chain: FilterChain,
+    settings: AppConfig,
+    isUpdating: Boolean
+  ): Unit =
     GitHttpService.paths(request) match {
       case Array(_, repositoryOwner, repositoryName, _*) =>
         rzRepository.getRepository(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
@@ -59,7 +59,7 @@ class GitAuthFilter extends Filter {
             // Authentication is required
             val passed = for {
               authorizationHeader <- Option(request.getHeader("Authorization"))
-              accountUsername <- authenticateByHeader(authorizationHeader, settings)
+              accountUsername     <- authenticateByHeader(authorizationHeader, settings)
             } yield
               if (isUpdating) {
                 request.setAttribute(GitRepositoryServlet.UserName, accountUsername)
@@ -81,7 +81,6 @@ class GitAuthFilter extends Filter {
         }
       case _ => response.sendError(HttpServletResponse.SC_NOT_FOUND)
     }
-  }
 
   /**
    * Authenticate by an Authorization header.

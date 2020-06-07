@@ -3,14 +3,14 @@ package git
 import java.io.File
 
 import javax.servlet.ServletConfig
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.eclipse.jgit.http.server.GitServlet
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.transport._
 import org.eclipse.jgit.transport.resolver._
 import org.slf4j.LoggerFactory
-import services.{AppConfig, RepositoryLockService, GitHttpService}
+import services.{ AppConfig, GitHttpService, RepositoryLockService }
 
 /**
  * Provides Git repository via HTTP.
@@ -42,7 +42,7 @@ class GitRepositoryServlet extends GitServlet {
     }
   }
 
-  private def withLockRepository[T](req: HttpServletRequest)(f: => T): T = {
+  private def withLockRepository[T](req: HttpServletRequest)(f: => T): T =
     if (req.getAttribute(GitRepositoryServlet.RepositoryLockKey) != null) {
       RepositoryLockService.lock(req.getAttribute(GitRepositoryServlet.RepositoryLockKey).asInstanceOf[String]) {
         f
@@ -50,10 +50,10 @@ class GitRepositoryServlet extends GitServlet {
     } else {
       f
     }
-  }
 }
 
 object GitRepositoryServlet {
+
   /**
    * Request key for the username which is used during Git repository access.
    */
@@ -68,9 +68,8 @@ object GitRepositoryServlet {
 class RzRepositoryResolver extends RepositoryResolver[HttpServletRequest] {
   val appConfig: AppConfig = AppConfig.load
 
-  override def open(req: HttpServletRequest, name: String): Repository = {
+  override def open(req: HttpServletRequest, name: String): Repository =
     new FileRepository(new File(appConfig.gitDirectory, name))
-  }
 
 }
 
@@ -80,19 +79,19 @@ class RzReceivePackFactory extends ReceivePackFactory[HttpServletRequest] {
 
   override def create(request: HttpServletRequest, db: Repository): ReceivePack = {
     val receivePack = new ReceivePack(db)
-    val pusher = request.getAttribute(GitRepositoryServlet.UserName).asInstanceOf[String]
+    val pusher      = request.getAttribute(GitRepositoryServlet.UserName).asInstanceOf[String]
 
     logger.debug("requestURI: " + request.getRequestURI)
     logger.debug("pusher:" + pusher)
 
-    val paths = GitHttpService.paths(request)
-    val owner = paths(1)
+    val paths      = GitHttpService.paths(request)
+    val owner      = paths(1)
     val repository = paths(2).stripSuffix(".git")
 
     logger.debug("repository:" + owner + "/" + repository)
 
     val baseUrl = GitHttpService.parseBaseUrl(request)
-    val hook = new CommitLogHook(owner, repository, pusher, baseUrl)
+    val hook    = new CommitLogHook(owner, repository, pusher, baseUrl)
     receivePack.setPreReceiveHook(hook)
     receivePack.setPostReceiveHook(hook)
 
@@ -100,9 +99,9 @@ class RzReceivePackFactory extends ReceivePackFactory[HttpServletRequest] {
   }
 }
 
-
 class CommitLogHook(owner: String, repository: String, pusher: String, baseUrl: String)
-  extends PostReceiveHook with PreReceiveHook {
+    extends PostReceiveHook
+    with PreReceiveHook {
 
   private val logger = LoggerFactory.getLogger(classOf[CommitLogHook])
 
@@ -115,4 +114,3 @@ class CommitLogHook(owner: String, repository: String, pusher: String, baseUrl: 
   }
 
 }
-
