@@ -2,9 +2,9 @@ package git
 
 import javax.servlet._
 import javax.servlet.http._
-import models.{ Database, RzRepository }
+import models.{ AppConfig, AuthorizationHeader, Database, GitLiterals, GitPaths }
 import org.slf4j.LoggerFactory
-import services.{ AppConfig, EncryptionService, GitHttpService }
+import repositories.RzRepository
 
 /**
  * Provides BASIC Authentication for [[GitRepositoryServlet]].
@@ -52,7 +52,7 @@ class GitAuthFilter extends Filter {
     settings: AppConfig,
     isUpdating: Boolean
   ): Unit =
-    GitHttpService.paths(request) match {
+    GitPaths(request).list match {
       case Array(_, repositoryOwner, repositoryName, _*) =>
         rzRepository.getRepository(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
           case Some(repository) =>
@@ -62,11 +62,11 @@ class GitAuthFilter extends Filter {
               accountUsername     <- authenticateByHeader(authorizationHeader, settings)
             } yield
               if (isUpdating) {
-                request.setAttribute(GitRepositoryServlet.UserName, accountUsername)
-                request.setAttribute(GitRepositoryServlet.RepositoryLockKey, s"$repositoryOwner/$repositoryName")
+                request.setAttribute(GitLiterals.UserName.toString, accountUsername)
+                request.setAttribute(GitLiterals.RepositoryLockKey.toString, s"$repositoryOwner/$repositoryName")
                 true
               } else {
-                request.setAttribute(GitRepositoryServlet.UserName, accountUsername)
+                request.setAttribute(GitLiterals.UserName.toString, accountUsername)
                 true
               }
 
@@ -92,11 +92,11 @@ class GitAuthFilter extends Filter {
    * @return an account or none
    */
   private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[String] = {
-    val Array(username, password) = EncryptionService.decodeAuthHeader(authorizationHeader).split(":", 2)
-    if (rzRepository.isUserExists(username, password)) {
-      Some(username)
-    } else {
-      None
+    val header = AuthorizationHeader(authorizationHeader)
+    header match {
+      case Some(header) if rzRepository.isUserWithPasswordExists(header.username, header.password) =>
+        Some(header.username)
+      case _ => Option.empty[String]
     }
   }
 }

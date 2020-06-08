@@ -3,7 +3,6 @@ package models
 import java.sql.Connection
 
 import com.zaxxer.hikari.{ HikariConfig, HikariDataSource }
-import services.PgConfig
 
 class Database(pgConfig: PgConfig) {
 

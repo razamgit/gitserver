@@ -3,7 +3,7 @@ import java.util
 import javax.servlet.{ DispatcherType, ServletContext }
 import org.scalatra._
 import git._
-import services.AppConfig
+import models.AppConfig
 
 class ScalatraBootstrap extends LifeCycle {
   override def init(context: ServletContext): Unit = {

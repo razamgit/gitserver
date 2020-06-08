@@ -1,9 +1,9 @@
-package services
+package models
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.{ Lock, ReentrantLock }
 
-object RepositoryLockService {
+object RepositoryLock {
   def defining[A, B](value: A)(f: A => B): B = f(value)
 
   /**
@@ -22,7 +22,7 @@ object RepositoryLockService {
   }
 
   /**
-   * Synchronizes a given function which modifies the working copy of the wiki repository.
+   * Synchronizes a given function which modifies the working copy of the repository.
    */
   def lock[T](key: String)(f: => T): T = defining(getLockObject(key)) { lock =>
     try {
