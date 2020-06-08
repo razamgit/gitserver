@@ -15,9 +15,9 @@ object AppConfig {
   def load: AppConfig = {
     val cfg = ConfigFactory.load
 
-    val gitDirectory = cfg.getString("gitDirectory")
-    val webBase      = cfg.getString("base")
-    val port         = cfg.getInt("port")
+    val gitDirectory = cfg.getString("git.path")
+    val webBase      = cfg.getString("http.base")
+    val port         = cfg.getInt("http.port")
 
     val db = PgConfig(
       cfg.getString("db.serverName"),
