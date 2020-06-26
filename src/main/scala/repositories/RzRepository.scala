@@ -1,8 +1,10 @@
 package repositories
 
+import java.security.KeyStore.TrustedCertificateEntry
+
 import anorm.SqlParser.get
 import anorm._
-import models.{ Database, HashedString }
+import models.{ Database, HashedString, SshKey }
 
 case class Repository(id: Long)
 
@@ -13,6 +15,15 @@ class RzRepository(db: Database) {
    */
   val passwordParser: RowParser[HashedString] = {
     get[String]("account.password").map(password => HashedString(password))
+  }
+
+  /**
+   * Parse a Hashed Password from a ResultSet
+   */
+  val sshKeyParser: RowParser[SshKey] = {
+    (get[Long]("ssh_keys.account_id") ~ get[String]("ssh_keys.public_key")).map {
+      case accountId ~ publicKey => SshKey(accountId, publicKey)
+    }
   }
 
   /**
@@ -40,6 +51,32 @@ class RzRepository(db: Database) {
         .as(passwordParser.singleOpt) match {
         case Some(passwordHashed) => passwordHashed.check(password)
         case None                 => false
+      }
+    }
+
+  def sshKeysByUserName(username: String): List[SshKey] =
+    db.withConnection { implicit connection =>
+      SQL("""
+          select ssh_keys.account_id, ssh_keys.public_key from ssh_keys
+          join account on account.id = ssh_keys.account_id
+          where account.username = {username}
+          """)
+        .on("username" -> username)
+        .as(sshKeyParser.*)
+    }
+
+  def isKeyExist(username: String, sshKey: SshKey): Boolean =
+    db.withConnection { implicit connection =>
+      SQL("""
+          select ssh_keys.account_id, ssh_keys.public_keys
+          join account on account.id = ssh_keys.account_id
+          where account.username = {username}
+          and ssh_keys.public_key = {publicKey}
+          """)
+        .on("username" -> username, "publicKey" -> sshKey.publicKey)
+        .as(sshKeyParser.singleOpt) match {
+        case Some(_key) => true
+        case _          => false
       }
     }
 }

@@ -1,5 +1,6 @@
 import java.util
 
+import filters.GitAuthFilter
 import javax.servlet.{ DispatcherType, ServletContext }
 import org.scalatra._
 import git._
@@ -7,9 +8,9 @@ import models.AppConfig
 
 class ScalatraBootstrap extends LifeCycle {
   override def init(context: ServletContext): Unit = {
-    val appConfig = AppConfig.load
+    val settings = AppConfig.load
 
-    val dir = new java.io.File(appConfig.gitDirectory)
+    val dir = new java.io.File(settings.gitDirectory)
     if (!dir.exists) {
       dir.mkdirs()
     }

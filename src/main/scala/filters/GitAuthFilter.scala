@@ -1,8 +1,9 @@
-package git
+package filters
 
+import git.GitRepositoryServlet
 import javax.servlet._
 import javax.servlet.http._
-import models.{ AppConfig, AuthorizationHeader, Database, GitLiterals, GitPaths }
+import models._
 import org.slf4j.LoggerFactory
 import repositories.RzRepository
 
