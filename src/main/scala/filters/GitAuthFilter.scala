@@ -17,9 +17,9 @@ class GitAuthFilter extends Filter {
 
   private val logger = LoggerFactory.getLogger(classOf[GitAuthFilter])
 
-  def init(config: FilterConfig): Unit = {}
+  override def init(config: FilterConfig): Unit = {}
 
-  def destroy(): Unit = {}
+  override def destroy(): Unit = {}
 
   def requireAuth(response: HttpServletResponse): Unit = {
     response.setHeader("WWW-Authenticate", "BASIC realm=\"razam\"")
