@@ -3,7 +3,7 @@ package git
 import java.io.{ InputStream, OutputStream }
 
 import filters.PublicKeyAuthenticator
-import models.{ AuthType, Database, RepositoryDirectory, RepositoryName }
+import models.{ AuthType, Database, RzRepository }
 import org.apache.sshd.server.command.{ Command, CommandFactory }
 import org.apache.sshd.server.session.ServerSession
 import org.apache.sshd.server.shell.UnknownCommand
@@ -92,10 +92,11 @@ class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extend
   val rzRepository = new RzRepository(db)
 
   override protected def runTask(authType: AuthType): Unit = {
-    val repoNameCleared = RepositoryName.fromRepo(repoName)
-    rzRepository.getRepository(owner, repoNameCleared.toString) match {
-      case Some(repository) =>
-        Using.resource(Git.open(RepositoryDirectory.toFile(owner, repoNameCleared.toString))) { git =>
+    val repository = RzRepository(owner, repoName)
+
+    rzRepository.getRepository(owner, repository.name) match {
+      case Some(_) =>
+        Using.resource(Git.open(repository.path)) { git =>
           val repository = git.getRepository
           val upload     = new UploadPack(repository)
           upload.upload(in, out, err)
@@ -110,11 +111,11 @@ class DefaultGitReceivePack(db: Database, owner: String, repoName: String, baseU
   val rzRepository = new RzRepository(db)
 
   override protected def runTask(authType: AuthType): Unit = {
-    val repoNameCleared = RepositoryName.fromRepo(repoName)
+    val repository = RzRepository(owner, repoName)
 
-    rzRepository.getRepository(owner, repoNameCleared.toString) match {
-      case Some(repository) =>
-        Using.resource(Git.open(RepositoryDirectory.toFile(owner, repoNameCleared.toString))) { git =>
+    rzRepository.getRepository(owner, repository.name) match {
+      case Some(_) =>
+        Using.resource(Git.open(repository.path)) { git =>
           val repository = git.getRepository
           val receive    = new ReceivePack(repository)
           val hook       = new CommitLogHook(owner, repoName, userName(authType), baseUrl)

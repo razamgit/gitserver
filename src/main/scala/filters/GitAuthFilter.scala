@@ -95,7 +95,7 @@ class GitAuthFilter extends Filter {
   private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[String] = {
     val header = AuthorizationHeader(authorizationHeader)
     header match {
-      case Some(header) if rzRepository.isUserWithPasswordExists(header.username, header.password) =>
+      case Some(header) if rzRepository.userWithPassword(header.username, header.password) =>
         Some(header.username)
       case _ => Option.empty[String]
     }

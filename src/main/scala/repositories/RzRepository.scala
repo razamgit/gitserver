@@ -4,25 +4,31 @@ import java.security.KeyStore.TrustedCertificateEntry
 
 import anorm.SqlParser.get
 import anorm._
-import models.{ Database, HashedString, SshKey }
+import models.{ AccessLevel, AccountWKey, AccountWPassword, Database, HashedString, SshKey }
 
 case class Repository(id: Long)
 
 class RzRepository(db: Database) {
 
   /**
-   * Parse a Hashed Password from a ResultSet
+   * Parse an Account with Hashed Password from a ResultSet
    */
-  val passwordParser: RowParser[HashedString] = {
-    get[String]("account.password").map(password => HashedString(password))
+  val passwordParser: RowParser[AccountWPassword] = {
+    (get[Long]("account.id") ~
+      get[String]("account.password") ~
+      get[Option[Int]]("collaborator.role")).map {
+      case accountId ~ password ~ role => AccountWPassword(accountId, HashedString(password), role)
+    }
   }
 
   /**
-   * Parse a Hashed Password from a ResultSet
+   * Parse an Account With Public Key from a ResultSet
    */
-  val sshKeyParser: RowParser[SshKey] = {
-    (get[Long]("ssh_keys.account_id") ~ get[String]("ssh_keys.public_key")).map {
-      case accountId ~ publicKey => SshKey(accountId, publicKey)
+  val sshKeyParser: RowParser[AccountWKey] = {
+    (get[Long]("ssh_key.account_id")
+      ~ get[String]("ssh_key.public_key")
+      ~ get[Option[Int]]("collaborator.role")).map {
+      case accountId ~ publicKey ~ role => AccountWKey(accountId, SshKey(accountId, publicKey), role)
     }
   }
 
@@ -44,39 +50,26 @@ class RzRepository(db: Database) {
         .as(simpleRepository.singleOpt)
     }
 
-  def isUserWithPasswordExists(username: String, password: String): Boolean =
-    db.withConnection { implicit connection =>
-      SQL("select password from account where account.username = {username}")
-        .on("username" -> username)
-        .as(passwordParser.singleOpt) match {
-        case Some(passwordHashed) => passwordHashed.check(password)
-        case None                 => false
-      }
-    }
-
-  def sshKeysByUserName(username: String): List[SshKey] =
+  def userWithPassword(username: String, password: String): Option[AccountWPassword] =
     db.withConnection { implicit connection =>
       SQL("""
-          select ssh_keys.account_id, ssh_keys.public_key from ssh_keys
-          join account on account.id = ssh_keys.account_id
+          select password from account
+          left join collaborator on collaborator.user_id = account.id
+          where account.username = {username}
+          """)
+        .on("username" -> username)
+        .as(passwordParser.singleOpt)
+    }
+
+  def sshKeysByUserName(username: String): List[AccountWKey] =
+    db.withConnection { implicit connection =>
+      SQL("""
+          select ssh_key.account_id, ssh_key.public_key, collaborator.role from ssh_key
+          join account on account.id = ssh_key.account.id
+          join collaborator on collaborator.user_id = account_id
           where account.username = {username}
           """)
         .on("username" -> username)
         .as(sshKeyParser.*)
-    }
-
-  def isKeyExist(username: String, sshKey: SshKey): Boolean =
-    db.withConnection { implicit connection =>
-      SQL("""
-          select ssh_keys.account_id, ssh_keys.public_keys
-          join account on account.id = ssh_keys.account_id
-          where account.username = {username}
-          and ssh_keys.public_key = {publicKey}
-          """)
-        .on("username" -> username, "publicKey" -> sshKey.publicKey)
-        .as(sshKeyParser.singleOpt) match {
-        case Some(_key) => true
-        case _          => false
-      }
     }
 }

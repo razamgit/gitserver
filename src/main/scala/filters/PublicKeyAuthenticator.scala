@@ -28,7 +28,6 @@ class PublicKeyAuthenticator(db: Database) extends PublickeyAuthenticator {
     authenticateLoginUser(username, key, session)
 
   private def authenticateLoginUser(userName: String, key: PublicKey, session: ServerSession): Boolean = {
-
     val userSshKeys =
       rzRepository.sshKeysByUserName(userName).flatMap(userKey => PublicKeyConstructor.fromString(userKey.publicKey))
 
