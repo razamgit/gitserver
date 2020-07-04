@@ -2,7 +2,7 @@ package git
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import filters.PublicKeyAuthenticator
+import filters.RzPublickeyAuthenticator
 import models.{ AppConfig, Database }
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider
 import org.slf4j.LoggerFactory
@@ -20,7 +20,7 @@ class SshServer(db: Database) {
     provider.setAlgorithm("RSA")
     provider.setOverwriteAllowed(false)
     server.setKeyPairProvider(provider)
-    server.setPublickeyAuthenticator(new PublicKeyAuthenticator(db))
+    server.setPublickeyAuthenticator(new RzPublickeyAuthenticator(db))
     server.setCommandFactory(new GitCommandFactory(db, settings.webBase))
     server.setShellFactory(new NoShell(settings.ssh))
   }

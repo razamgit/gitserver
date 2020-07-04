@@ -2,7 +2,7 @@ package git
 
 import java.io.{ InputStream, OutputStream }
 
-import filters.PublicKeyAuthenticator
+import filters.RzPublickeyAuthenticator
 import models.{ AuthType, Database, RzRepository }
 import org.apache.sshd.server.command.{ Command, CommandFactory }
 import org.apache.sshd.server.session.ServerSession
@@ -12,7 +12,7 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.transport.{ ReceivePack, UploadPack }
 import org.slf4j.LoggerFactory
-import repositories.RzRepository
+import repositories.RzEntitiesRepository
 
 import scala.util.Using
 import scala.util.matching.Regex
@@ -75,7 +75,7 @@ abstract class GitCommand extends Command with SessionAware {
     this.in = in
 
   override def setSession(serverSession: ServerSession): Unit =
-    this.authType = PublicKeyAuthenticator.getAuthType(serverSession)
+    this.authType = RzPublickeyAuthenticator.getAuthType(serverSession)
 
 }
 
@@ -89,7 +89,7 @@ abstract class DefaultGitCommand(val owner: String, val repoName: String) extend
 }
 
 class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extends DefaultGitCommand(owner, repoName) {
-  val rzRepository = new RzRepository(db)
+  val rzRepository = new RzEntitiesRepository(db)
 
   override protected def runTask(authType: AuthType): Unit = {
     val repository = RzRepository(owner, repoName)
@@ -108,7 +108,7 @@ class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extend
 
 class DefaultGitReceivePack(db: Database, owner: String, repoName: String, baseUrl: String)
     extends DefaultGitCommand(owner, repoName) {
-  val rzRepository = new RzRepository(db)
+  val rzRepository = new RzEntitiesRepository(db)
 
   override protected def runTask(authType: AuthType): Unit = {
     val repository = RzRepository(owner, repoName)

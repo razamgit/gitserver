@@ -7,9 +7,9 @@ import org.apache.sshd.common.AttributeStore
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator
 import org.apache.sshd.server.session.ServerSession
 import org.slf4j.LoggerFactory
-import repositories.RzRepository
+import repositories.RzEntitiesRepository
 
-object PublicKeyAuthenticator {
+object RzPublickeyAuthenticator {
   // put in the ServerSession here to be read by GitCommand later
   private val authTypeSessionKey = new AttributeStore.AttributeKey[AuthType]
 
@@ -20,9 +20,9 @@ object PublicKeyAuthenticator {
     Option(serverSession.getAttribute(authTypeSessionKey))
 }
 
-class PublicKeyAuthenticator(db: Database) extends PublickeyAuthenticator {
-  private val logger = LoggerFactory.getLogger(classOf[PublicKeyAuthenticator])
-  val rzRepository   = new RzRepository(db)
+class RzPublickeyAuthenticator(db: Database) extends PublickeyAuthenticator {
+  private val logger = LoggerFactory.getLogger(classOf[RzPublickeyAuthenticator])
+  val rzRepository   = new RzEntitiesRepository(db)
 
   override def authenticate(username: String, key: PublicKey, session: ServerSession): Boolean =
     authenticateLoginUser(username, key, session)
@@ -33,7 +33,7 @@ class PublicKeyAuthenticator(db: Database) extends PublickeyAuthenticator {
 
     if (userSshKeys.contains(key)) {
       logger.info(s"authentication as ssh user ${userName} succeeded")
-      PublicKeyAuthenticator.putAuthType(session, AuthType.UserAuthType(userName))
+      RzPublickeyAuthenticator.putAuthType(session, AuthType.UserAuthType(userName))
       true
     } else {
       logger.info(s"authentication as ssh user ${userName} failed")

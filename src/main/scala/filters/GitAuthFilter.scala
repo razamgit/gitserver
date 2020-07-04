@@ -5,7 +5,7 @@ import javax.servlet._
 import javax.servlet.http._
 import models._
 import org.slf4j.LoggerFactory
-import repositories.RzRepository
+import repositories.RzEntitiesRepository
 
 /**
  * Provides BASIC Authentication for [[GitRepositoryServlet]].
@@ -13,7 +13,7 @@ import repositories.RzRepository
 class GitAuthFilter extends Filter {
   val appConfig: AppConfig = AppConfig.load
   val db                   = new Database(appConfig.db)
-  val rzRepository         = new RzRepository(db)
+  val rzRepository         = new RzEntitiesRepository(db)
 
   private val logger = LoggerFactory.getLogger(classOf[GitAuthFilter])
 

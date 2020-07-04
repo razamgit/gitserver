@@ -6,9 +6,7 @@ import anorm.SqlParser.get
 import anorm._
 import models.{ AccessLevel, AccountWKey, AccountWPassword, Database, HashedString, SshKey }
 
-case class Repository(id: Long)
-
-class RzRepository(db: Database) {
+class RzEntitiesRepository(db: Database) {
 
   /**
    * Parse an Account with Hashed Password from a ResultSet
@@ -32,14 +30,7 @@ class RzRepository(db: Database) {
     }
   }
 
-  /**
-   * Parse a Repository from a ResultSet
-   */
-  private val simpleRepository = {
-    get[Long]("repository.id").map(id => Repository(id))
-  }
-
-  def getRepository(repositoryOwner: String, repositoryName: String): Option[Repository] =
+  def repositoryId(repositoryOwner: String, repositoryName: String): Option[Int] =
     db.withConnection { implicit connection =>
       SQL("""select repository.id from repository
              join account on account.id = repository.owner_id
