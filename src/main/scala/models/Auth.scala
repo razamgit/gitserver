@@ -7,22 +7,6 @@ import org.apache.sshd.common.util.buffer.ByteArrayBuffer
 import org.eclipse.jgit.lib.Constants
 import org.mindrot.jbcrypt.BCrypt
 
-sealed trait AuthType
-
-object AuthType {
-  case class UserAuthType(userName: String)      extends AuthType
-  case class DeployKeyType(publicKey: PublicKey) extends AuthType
-
-  /**
-   * Retrieves username if authType is UserAuthType, otherwise None.
-   */
-  def userName(authType: AuthType): Option[String] =
-    authType match {
-      case UserAuthType(userName) => Some(userName)
-      case _                      => None
-    }
-}
-
 case class AuthorizationHeader(username: String, password: String)
 
 object AuthorizationHeader {

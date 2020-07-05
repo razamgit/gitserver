@@ -1,10 +1,8 @@
 package repositories
 
-import java.security.KeyStore.TrustedCertificateEntry
-
 import anorm.SqlParser.get
 import anorm._
-import models.{ AccessLevel, AccountWKey, AccountWPassword, Database, HashedString, SshKey }
+import models._
 
 class RzEntitiesRepository(db: Database) {
 
@@ -12,21 +10,17 @@ class RzEntitiesRepository(db: Database) {
    * Parse an Account with Hashed Password from a ResultSet
    */
   val passwordParser: RowParser[AccountWPassword] = {
-    (get[Long]("account.id") ~
-      get[String]("account.password") ~
-      get[Option[Int]]("collaborator.role")).map {
-      case accountId ~ password ~ role => AccountWPassword(accountId, HashedString(password), role)
+    (get[Long]("account.id") ~ get[String]("account.username") ~ get[String]("account.password")).map {
+      case accountId ~ username ~ password => AccountWPassword(accountId, username, HashedString(password))
     }
   }
 
   /**
    * Parse an Account With Public Key from a ResultSet
    */
-  val sshKeyParser: RowParser[AccountWKey] = {
-    (get[Long]("ssh_key.account_id")
-      ~ get[String]("ssh_key.public_key")
-      ~ get[Option[Int]]("collaborator.role")).map {
-      case accountId ~ publicKey ~ role => AccountWKey(accountId, SshKey(accountId, publicKey), role)
+  val sshKeyParser: RowParser[SshKey] = {
+    (get[Long]("ssh_key.account_id") ~ get[String]("ssh_key.public_key")).map {
+      case accountId ~ publicKey => SshKey(accountId, publicKey)
     }
   }
 
@@ -38,29 +32,51 @@ class RzEntitiesRepository(db: Database) {
              and repository."name" = {repositoryName}
              """)
         .on("repositoryOwner" -> repositoryOwner, "repositoryName" -> repositoryName)
-        .as(simpleRepository.singleOpt)
+        .as(SqlParser.int("repository.id").singleOpt)
     }
 
   def userWithPassword(username: String, password: String): Option[AccountWPassword] =
     db.withConnection { implicit connection =>
       SQL("""
-          select password from account
-          left join collaborator on collaborator.user_id = account.id
+          select id, username, password from account
           where account.username = {username}
           """)
         .on("username" -> username)
-        .as(passwordParser.singleOpt)
+        .as(passwordParser.singleOpt) match {
+        case Some(account) if account.password.check(password) => Some(account)
+        case None                                              => Option.empty[AccountWPassword]
+      }
     }
 
-  def sshKeysByUserName(username: String): List[AccountWKey] =
+  def sshKeysByUserName(username: String): List[SshKey] =
     db.withConnection { implicit connection =>
       SQL("""
-          select ssh_key.account_id, ssh_key.public_key, collaborator.role from ssh_key
+          select ssh_key.account_id, ssh_key.public_key from ssh_key
           join account on account.id = ssh_key.account.id
-          join collaborator on collaborator.user_id = account_id
           where account.username = {username}
           """)
         .on("username" -> username)
         .as(sshKeyParser.*)
     }
+
+  def doesAccountHaveAccess(
+    repositoryId: Int,
+    repositoryOwner: String,
+    account: Account,
+    minimumLevel: AccessLevel
+  ): Boolean =
+    db.withConnection { implicit connection =>
+      SQL("""
+          select collaborator.role from collaborator
+          where collaborator.account_id = {accountId}
+          and collaborator.repository_id = {repositoryId}
+          """)
+        .on("accountId" -> account.accountId, "repositoryId" -> repositoryId)
+        .as(SqlParser.int("collaborator.role").singleOpt) match {
+        case Some(r)                                     => minimumLevel.role >= AccessLevel.fromRole(r).getOrElse(ViewAccess).role
+        case None if repositoryOwner == account.username => true // owner have absolute access
+        case None if repositoryOwner != account.username => false
+      }
+    }
+
 }

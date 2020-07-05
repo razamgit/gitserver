@@ -23,13 +23,12 @@ object AccessLevel {
       case _ if role == EditAccess.role  => Some(EditAccess)
       case _                             => Option.empty[AccessLevel]
     }
-
 }
 
 sealed trait Account {
   def accountId: Long
-  def access: Option[int]
+  def username: String
 }
 
-case class AccountWPassword(accountId: Long, password: HashedString, access: Option[Int]) extends Account
-case class AccountWKey(accountId: Long, key: SshKey, access: Option[Int])                 extends Account
+case class AccountWPassword(accountId: Long, username: String, password: HashedString) extends Account
+case class AccountWKey(accountId: Long, username: String, key: SshKey)                 extends Account

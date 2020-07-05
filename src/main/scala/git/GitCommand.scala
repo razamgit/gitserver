@@ -3,7 +3,7 @@ package git
 import java.io.{ InputStream, OutputStream }
 
 import filters.RzPublickeyAuthenticator
-import models.{ AuthType, Database, RzRepository }
+import models.{ Account, Database, RzRepository, ViewAccess }
 import org.apache.sshd.server.command.{ Command, CommandFactory }
 import org.apache.sshd.server.session.ServerSession
 import org.apache.sshd.server.shell.UnknownCommand
@@ -26,13 +26,13 @@ abstract class GitCommand extends Command with SessionAware {
 
   private val logger = LoggerFactory.getLogger(classOf[GitCommand])
 
-  @volatile protected var err: OutputStream        = _
-  @volatile protected var in: InputStream          = _
-  @volatile protected var out: OutputStream        = _
-  @volatile protected var callback: ExitCallback   = _
-  @volatile private var authType: Option[AuthType] = None
+  @volatile protected var err: OutputStream       = _
+  @volatile protected var in: InputStream         = _
+  @volatile protected var out: OutputStream       = _
+  @volatile protected var callback: ExitCallback  = _
+  @volatile private var authType: Option[Account] = None
 
-  protected def runTask(authType: AuthType): Unit
+  protected def runTask(authType: Account): Unit
 
   private def newTask(): Runnable = () => {
     authType match {
@@ -79,29 +79,23 @@ abstract class GitCommand extends Command with SessionAware {
 
 }
 
-abstract class DefaultGitCommand(val owner: String, val repoName: String) extends GitCommand {
-
-  protected def userName(authType: AuthType): String =
-    authType match {
-      case AuthType.UserAuthType(userName) => userName
-      case AuthType.DeployKeyType(_)       => owner
-    }
-}
+abstract class DefaultGitCommand(val owner: String, val repoName: String) extends GitCommand {}
 
 class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extends DefaultGitCommand(owner, repoName) {
   val rzRepository = new RzEntitiesRepository(db)
 
-  override protected def runTask(authType: AuthType): Unit = {
-    val repository = RzRepository(owner, repoName)
+  def upload(repository: RzRepository): Unit =
+    Using.resource(Git.open(repository.path)) { git =>
+      val repository = git.getRepository
+      val upload     = new UploadPack(repository)
+      upload.upload(in, out, err)
+    }
 
-    rzRepository.getRepository(owner, repository.name) match {
-      case Some(_) =>
-        Using.resource(Git.open(repository.path)) { git =>
-          val repository = git.getRepository
-          val upload     = new UploadPack(repository)
-          upload.upload(in, out, err)
-        }
-      case _ => ()
+  override protected def runTask(account: Account): Unit = {
+    val repository = RzRepository(owner, repoName)
+    rzRepository.repositoryId(owner, repository.name) match {
+      case Some(id) if rzRepository.doesAccountHaveAccess(id, repoName, account, ViewAccess) => upload(repository)
+      case _                                                                                 => ()
     }
   }
 }
@@ -110,19 +104,21 @@ class DefaultGitReceivePack(db: Database, owner: String, repoName: String, baseU
     extends DefaultGitCommand(owner, repoName) {
   val rzRepository = new RzEntitiesRepository(db)
 
-  override protected def runTask(authType: AuthType): Unit = {
-    val repository = RzRepository(owner, repoName)
+  private def receivePack(repository: RzRepository, account: Account): Unit =
+    Using.resource(Git.open(repository.path)) { git =>
+      val repository = git.getRepository
+      val receive    = new ReceivePack(repository)
+      val hook       = new CommitLogHook(owner, repoName, account.username, baseUrl)
+      receive.setPreReceiveHook(hook)
+      receive.setPostReceiveHook(hook)
+      receive.receive(in, out, err)
+    }
 
-    rzRepository.getRepository(owner, repository.name) match {
-      case Some(_) =>
-        Using.resource(Git.open(repository.path)) { git =>
-          val repository = git.getRepository
-          val receive    = new ReceivePack(repository)
-          val hook       = new CommitLogHook(owner, repoName, userName(authType), baseUrl)
-          receive.setPreReceiveHook(hook)
-          receive.setPostReceiveHook(hook)
-          receive.receive(in, out, err)
-        }
+  override protected def runTask(account: Account): Unit = {
+    val repository = RzRepository(owner, repoName)
+    rzRepository.repositoryId(owner, repository.name) match {
+      case Some(id) if rzRepository.doesAccountHaveAccess(id, repoName, account, ViewAccess) =>
+        receivePack(repository, account)
       case _ => ()
     }
   }

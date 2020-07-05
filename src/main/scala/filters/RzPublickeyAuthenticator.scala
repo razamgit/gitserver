@@ -2,7 +2,7 @@ package filters
 
 import java.security.PublicKey
 
-import models.{ AuthType, Database, PublicKeyConstructor }
+import models.{ Account, AccountWKey, Database, PublicKeyConstructor }
 import org.apache.sshd.common.AttributeStore
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator
 import org.apache.sshd.server.session.ServerSession
@@ -11,12 +11,12 @@ import repositories.RzEntitiesRepository
 
 object RzPublickeyAuthenticator {
   // put in the ServerSession here to be read by GitCommand later
-  private val authTypeSessionKey = new AttributeStore.AttributeKey[AuthType]
+  private val authTypeSessionKey = new AttributeStore.AttributeKey[Account]
 
-  def putAuthType(serverSession: ServerSession, authType: AuthType): Unit =
-    serverSession.setAttribute(authTypeSessionKey, authType)
+  def putAuthType(serverSession: ServerSession, account: Account): Unit =
+    serverSession.setAttribute(authTypeSessionKey, account)
 
-  def getAuthType(serverSession: ServerSession): Option[AuthType] =
+  def getAuthType(serverSession: ServerSession): Option[Account] =
     Option(serverSession.getAttribute(authTypeSessionKey))
 }
 
@@ -27,13 +27,12 @@ class RzPublickeyAuthenticator(db: Database) extends PublickeyAuthenticator {
   override def authenticate(username: String, key: PublicKey, session: ServerSession): Boolean =
     authenticateLoginUser(username, key, session)
 
-  private def authenticateLoginUser(userName: String, key: PublicKey, session: ServerSession): Boolean = {
-    val userSshKeys =
-      rzRepository.sshKeysByUserName(userName).flatMap(userKey => PublicKeyConstructor.fromString(userKey.publicKey))
-
-    if (userSshKeys.contains(key)) {
-      logger.info(s"authentication as ssh user ${userName} succeeded")
-      RzPublickeyAuthenticator.putAuthType(session, AuthType.UserAuthType(userName))
+  private def authenticateLoginUser(userName: String, accountKey: PublicKey, session: ServerSession): Boolean = {
+    val userKeys = rzRepository.sshKeysByUserName(userName)
+    val authKey  = userKeys.filter(key => PublicKeyConstructor.fromString(key.publicKey).getOrElse(None) == accountKey)
+    if (authKey.nonEmpty) {
+      logger.info(s"Authentication as ssh user ${userName} succeeded")
+      RzPublickeyAuthenticator.putAuthType(session, AccountWKey(userKeys.head.accountId, userName, authKey.head))
       true
     } else {
       logger.info(s"authentication as ssh user ${userName} failed")

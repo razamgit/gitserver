@@ -55,19 +55,19 @@ class GitAuthFilter extends Filter {
   ): Unit =
     GitPaths(request).list match {
       case Array(_, repositoryOwner, repositoryName, _*) =>
-        rzRepository.getRepository(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
-          case Some(repository) =>
+        rzRepository.repositoryId(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
+          case Some(_) =>
             // Authentication is required
             val passed = for {
               authorizationHeader <- Option(request.getHeader("Authorization"))
-              accountUsername     <- authenticateByHeader(authorizationHeader, settings)
+              account     <- authenticateByHeader(authorizationHeader, settings)
             } yield
               if (isUpdating) {
-                request.setAttribute(GitLiterals.UserName.toString, accountUsername)
+                request.setAttribute(GitLiterals.UserName.toString, account)
                 request.setAttribute(GitLiterals.RepositoryLockKey.toString, s"$repositoryOwner/$repositoryName")
                 true
               } else {
-                request.setAttribute(GitLiterals.UserName.toString, accountUsername)
+                request.setAttribute(GitLiterals.UserName.toString, account)
                 true
               }
 
@@ -92,12 +92,11 @@ class GitAuthFilter extends Filter {
    * @param settings            system settings
    * @return an account or none
    */
-  private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[String] = {
+  private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[Account] = {
     val header = AuthorizationHeader(authorizationHeader)
     header match {
-      case Some(header) if rzRepository.userWithPassword(header.username, header.password) =>
-        Some(header.username)
-      case _ => Option.empty[String]
+      case Some(header) => rzRepository.userWithPassword(header.username, header.password)
+      case _ => Option.empty[Account]
     }
   }
 }
