@@ -2,7 +2,7 @@ package git
 
 import filters.GitAuthFilter
 import javax.servlet.ServletConfig
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import models._
 import org.eclipse.jgit.http.server.GitServlet
 import org.eclipse.jgit.internal.storage.file.FileRepository
@@ -52,10 +52,8 @@ class GitRepositoryServlet extends GitServlet {
 }
 
 class RzRepositoryResolver extends RepositoryResolver[HttpServletRequest] {
-  override def open(req: HttpServletRequest, name: String): Repository = {
-    val account = req.getAttribute(GitLiterals.UserName.toString).asInstanceOf[Account]
-    new FileRepository(RzRepository(account.username, name).path)
-  }
+  override def open(req: HttpServletRequest, name: String): Repository =
+    new FileRepository(RzRepository(name).path)
 
 }
 

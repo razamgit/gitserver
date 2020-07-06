@@ -60,7 +60,7 @@ class GitAuthFilter extends Filter {
             // Authentication is required
             val passed = for {
               authorizationHeader <- Option(request.getHeader("Authorization"))
-              account     <- authenticateByHeader(authorizationHeader, settings)
+              account             <- authenticateByHeader(authorizationHeader, settings)
             } yield
               if (isUpdating) {
                 request.setAttribute(GitLiterals.UserName.toString, account)
@@ -70,7 +70,6 @@ class GitAuthFilter extends Filter {
                 request.setAttribute(GitLiterals.UserName.toString, account)
                 true
               }
-
             val execute = passed.getOrElse(false)
 
             if (execute) {
@@ -96,7 +95,7 @@ class GitAuthFilter extends Filter {
     val header = AuthorizationHeader(authorizationHeader)
     header match {
       case Some(header) => rzRepository.userWithPassword(header.username, header.password)
-      case _ => Option.empty[Account]
+      case _            => Option.empty[Account]
     }
   }
 }

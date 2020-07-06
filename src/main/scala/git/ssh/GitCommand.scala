@@ -1,23 +1,22 @@
 package git.ssh
 
-import java.io.{InputStream, OutputStream}
+import java.io.{ InputStream, OutputStream }
 
 import filters.RzPublickeyAuthenticator
 import git.CommitLogHook
 import models.GitLiterals.GitCommandRegex
 import models._
-import org.apache.sshd.server.command.{Command, CommandFactory}
+import org.apache.sshd.server.command.{ Command, CommandFactory }
 import org.apache.sshd.server.session.ServerSession
 import org.apache.sshd.server.shell.UnknownCommand
-import org.apache.sshd.server.{Environment, ExitCallback, SessionAware}
+import org.apache.sshd.server.{ Environment, ExitCallback, SessionAware }
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.errors.RepositoryNotFoundException
-import org.eclipse.jgit.transport.{ReceivePack, UploadPack}
+import org.eclipse.jgit.transport.{ ReceivePack, UploadPack }
 import org.slf4j.LoggerFactory
 import repositories.RzEntitiesRepository
 
 import scala.util.Using
-
 
 abstract class GitCommand(val owner: String, val repoName: String) extends Command with SessionAware {
 
@@ -90,13 +89,13 @@ class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extend
     val repository = RzRepository(owner, repoName)
     rzRepository.repositoryId(owner, repository.name) match {
       case Some(id) if rzRepository.doesAccountHaveAccess(id, owner, account, ViewAccess) => upload(repository)
-      case _                                                                                 => ()
+      case _                                                                              => ()
     }
   }
 }
 
 class DefaultGitReceivePack(db: Database, owner: String, repoName: String, baseUrl: String)
-  extends GitCommand(owner, repoName) {
+    extends GitCommand(owner, repoName) {
   val rzRepository = new RzEntitiesRepository(db)
 
   private def receivePack(repository: RzRepository, account: Account): Unit =

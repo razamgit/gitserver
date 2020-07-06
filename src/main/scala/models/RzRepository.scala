@@ -13,4 +13,14 @@ object RzRepository {
       name.replaceFirst("\\.wiki\\Z", ""),
       new File(RzRepository.appConfig.gitDirectory, s"$owner/$name")
     )
+
+  /**
+   * For repository name like "owner/reponame"
+   */
+  def apply(name: String): RzRepository =
+    new RzRepository(
+      name.split("/").head,
+      name.replaceFirst("\\.wiki\\Z", ""),
+      new File(RzRepository.appConfig.gitDirectory, name)
+    )
 }

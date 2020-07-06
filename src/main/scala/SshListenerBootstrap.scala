@@ -1,6 +1,6 @@
 import git.ssh.SshServer
-import javax.servlet.{ServletContextEvent, ServletContextListener}
-import models.{AppConfig, Database}
+import javax.servlet.{ ServletContextEvent, ServletContextListener }
+import models.{ AppConfig, Database }
 import org.slf4j.LoggerFactory
 
 /*
