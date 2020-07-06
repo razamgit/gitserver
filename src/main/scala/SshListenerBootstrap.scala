@@ -1,6 +1,6 @@
-import git.SshServer
-import javax.servlet.{ ServletContextEvent, ServletContextListener }
-import models.{ AppConfig, Database }
+import git.ssh.SshServer
+import javax.servlet.{ServletContextEvent, ServletContextListener}
+import models.{AppConfig, Database}
 import org.slf4j.LoggerFactory
 
 /*
@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory
  * How to use:
  * git clone ssh://username@host_or_ip:2200/owner/repository_name.git
  */
-class SshServerListener extends ServletContextListener {
+class SshListenerBootstrap extends ServletContextListener {
 
-  private val logger = LoggerFactory.getLogger(classOf[SshServerListener])
+  private val logger = LoggerFactory.getLogger(classOf[SshListenerBootstrap])
 
   val settings: AppConfig = AppConfig.load
 

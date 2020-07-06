@@ -1,9 +1,9 @@
-package git
+package git.ssh
 
 import java.util.concurrent.atomic.AtomicBoolean
 
 import filters.RzPublickeyAuthenticator
-import models.{ AppConfig, Database }
+import models.{AppConfig, Database}
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider
 import org.slf4j.LoggerFactory
 

@@ -1,28 +1,25 @@
-package git
+package git.ssh
 
-import java.io.{ InputStream, OutputStream }
+import java.io.{InputStream, OutputStream}
 
 import filters.RzPublickeyAuthenticator
-import models.{ Account, Database, RzRepository, ViewAccess }
-import org.apache.sshd.server.command.{ Command, CommandFactory }
+import git.CommitLogHook
+import models.GitLiterals.GitCommandRegex
+import models._
+import org.apache.sshd.server.command.{Command, CommandFactory}
 import org.apache.sshd.server.session.ServerSession
 import org.apache.sshd.server.shell.UnknownCommand
-import org.apache.sshd.server.{ Environment, ExitCallback, SessionAware }
+import org.apache.sshd.server.{Environment, ExitCallback, SessionAware}
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.errors.RepositoryNotFoundException
-import org.eclipse.jgit.transport.{ ReceivePack, UploadPack }
+import org.eclipse.jgit.transport.{ReceivePack, UploadPack}
 import org.slf4j.LoggerFactory
 import repositories.RzEntitiesRepository
 
 import scala.util.Using
-import scala.util.matching.Regex
 
-object GitCommand {
-  val DefaultCommandRegex: Regex = """\Agit-(upload|receive)-pack '/([a-zA-Z0-9\-_.]+)/([a-zA-Z0-9\-\+_.]+).git'\Z""".r
-  val SimpleCommandRegex: Regex  = """\Agit-(upload|receive)-pack '/(.+\.git)'\Z""".r
-}
 
-abstract class GitCommand extends Command with SessionAware {
+abstract class GitCommand(val owner: String, val repoName: String) extends Command with SessionAware {
 
   private val logger = LoggerFactory.getLogger(classOf[GitCommand])
 
@@ -79,9 +76,7 @@ abstract class GitCommand extends Command with SessionAware {
 
 }
 
-abstract class DefaultGitCommand(val owner: String, val repoName: String) extends GitCommand {}
-
-class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extends DefaultGitCommand(owner, repoName) {
+class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extends GitCommand(owner, repoName) {
   val rzRepository = new RzEntitiesRepository(db)
 
   def upload(repository: RzRepository): Unit =
@@ -94,14 +89,14 @@ class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extend
   override protected def runTask(account: Account): Unit = {
     val repository = RzRepository(owner, repoName)
     rzRepository.repositoryId(owner, repository.name) match {
-      case Some(id) if rzRepository.doesAccountHaveAccess(id, repoName, account, ViewAccess) => upload(repository)
+      case Some(id) if rzRepository.doesAccountHaveAccess(id, owner, account, ViewAccess) => upload(repository)
       case _                                                                                 => ()
     }
   }
 }
 
 class DefaultGitReceivePack(db: Database, owner: String, repoName: String, baseUrl: String)
-    extends DefaultGitCommand(owner, repoName) {
+  extends GitCommand(owner, repoName) {
   val rzRepository = new RzEntitiesRepository(db)
 
   private def receivePack(repository: RzRepository, account: Account): Unit =
@@ -117,7 +112,7 @@ class DefaultGitReceivePack(db: Database, owner: String, repoName: String, baseU
   override protected def runTask(account: Account): Unit = {
     val repository = RzRepository(owner, repoName)
     rzRepository.repositoryId(owner, repository.name) match {
-      case Some(id) if rzRepository.doesAccountHaveAccess(id, repoName, account, ViewAccess) =>
+      case Some(id) if rzRepository.doesAccountHaveAccess(id, owner, account, EditAccess) =>
         receivePack(repository, account)
       case _ => ()
     }
@@ -131,8 +126,8 @@ class GitCommandFactory(db: Database, baseUrl: String) extends CommandFactory {
     logger.debug(s"command: $command")
 
     command match {
-      case GitCommand.DefaultCommandRegex("upload", owner, repoName) => new DefaultGitUploadPack(db, owner, repoName)
-      case GitCommand.DefaultCommandRegex("receive", owner, repoName) =>
+      case GitCommandRegex.toRegex("upload", owner, repoName) => new DefaultGitUploadPack(db, owner, repoName)
+      case GitCommandRegex.toRegex("receive", owner, repoName) =>
         new DefaultGitReceivePack(db, owner, repoName, baseUrl)
       case _ => new UnknownCommand(command)
     }

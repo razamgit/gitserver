@@ -52,7 +52,7 @@ class RzEntitiesRepository(db: Database) {
     db.withConnection { implicit connection =>
       SQL("""
           select ssh_key.account_id, ssh_key.public_key from ssh_key
-          join account on account.id = ssh_key.account.id
+          join account on account.id = ssh_key.account_id
           where account.username = {username}
           """)
         .on("username" -> username)
@@ -68,7 +68,7 @@ class RzEntitiesRepository(db: Database) {
     db.withConnection { implicit connection =>
       SQL("""
           select collaborator.role from collaborator
-          where collaborator.account_id = {accountId}
+          where collaborator.user_id = {accountId}
           and collaborator.repository_id = {repositoryId}
           """)
         .on("accountId" -> account.accountId, "repositoryId" -> repositoryId)

@@ -28,6 +28,6 @@
     <!-- SSH Daemon initialized -->
     <!-- ===================================================================== -->
     <listener>
-        <listener-class>SshServerListener</listener-class>
+        <listener-class>SshListenerBootstrap</listener-class>
     </listener>
 </web-app>

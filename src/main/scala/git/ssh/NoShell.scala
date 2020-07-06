@@ -1,11 +1,11 @@
-package git
+package git.ssh
 
-import java.io.{ InputStream, OutputStream }
+import java.io.{InputStream, OutputStream}
 
 import models.SshAddress
 import org.apache.sshd.common.Factory
 import org.apache.sshd.server.command.Command
-import org.apache.sshd.server.{ Environment, ExitCallback }
+import org.apache.sshd.server.{Environment, ExitCallback}
 import org.eclipse.jgit.lib.Constants
 
 class NoShell(sshAddress: SshAddress) extends Factory[Command] {

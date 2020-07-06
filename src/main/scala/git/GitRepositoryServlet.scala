@@ -1,11 +1,9 @@
 package git
 
-import java.io.File
-
 import filters.GitAuthFilter
 import javax.servlet.ServletConfig
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
-import models.{ Account, AppConfig, BaseUrl, GitLiterals, GitPaths, RzRepositoryLock, RzRepository }
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import models._
 import org.eclipse.jgit.http.server.GitServlet
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib._

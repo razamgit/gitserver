@@ -1,6 +1,7 @@
 package models
 
 import javax.servlet.http.HttpServletRequest
+import scala.util.matching.Regex
 
 sealed trait GitUrl {
   def url: String
@@ -44,5 +45,9 @@ object GitLiterals {
    */
   case object RepositoryLockKey extends GitLiterals {
     override def toString: String = "REPOSITORY_LOCK_KEY"
+  }
+
+  case object GitCommandRegex extends GitLiterals {
+    val toRegex: Regex = """\Agit-(upload|receive)-pack '/([a-zA-Z0-9\-_.]+)/([a-zA-Z0-9\-\+_.]+).git'\Z""".r
   }
 }
