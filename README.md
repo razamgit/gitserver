@@ -12,7 +12,7 @@ $ sbt
 ```
 
 ```
-
+git clone http://localhost:8080/git/admin/test.git
 git clone ssh://admin@localhost:2200/admin/test.git # ssh
 ```
 

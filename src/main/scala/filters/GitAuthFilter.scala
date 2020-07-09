@@ -56,26 +56,22 @@ class GitAuthFilter extends Filter {
     GitPaths(request).list match {
       case Array(_, repositoryOwner, repositoryName, _*) =>
         rzRepository.repositoryId(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
-          case Some(_) =>
-            // Authentication is required
-            val passed = for {
-              authorizationHeader <- Option(request.getHeader("Authorization"))
-              account             <- authenticateByHeader(authorizationHeader, settings)
-            } yield
-              if (isUpdating) {
-                request.setAttribute(GitLiterals.UserName.toString, account)
-                request.setAttribute(GitLiterals.RepositoryLockKey.toString, s"$repositoryOwner/$repositoryName")
-                true
-              } else {
-                request.setAttribute(GitLiterals.UserName.toString, account)
-                true
-              }
-            val execute = passed.getOrElse(false)
-
-            if (execute) {
-              chain.doFilter(request, response)
-            } else {
-              requireAuth(response)
+          case Some(repositoryId) =>
+            val account = authenticateByHeader(request.getHeader("Authorization"), settings)
+            val minimumAccessLevel = if (isUpdating) EditAccess else ViewAccess
+            account match {
+              case Some(acc: AccountWPassword) =>
+                val execute = rzRepository.doesAccountHaveAccess(repositoryId, repositoryOwner, acc, minimumAccessLevel)
+                if (execute) {
+                  request.setAttribute(GitLiterals.UserName.toString, acc.username)
+                  if (isUpdating) {
+                    request.setAttribute(GitLiterals.RepositoryLockKey.toString, s"$repositoryOwner/$repositoryName")
+                  }
+                  chain.doFilter(request, response)
+                } else {
+                  requireAuth(response)
+                }
+              case _ => requireAuth(response)
             }
           case None => response.sendError(HttpServletResponse.SC_NOT_FOUND)
         }
@@ -91,11 +87,11 @@ class GitAuthFilter extends Filter {
    * @param settings            system settings
    * @return an account or none
    */
-  private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[Account] = {
+  private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[AccountWPassword] = {
     val header = AuthorizationHeader(authorizationHeader)
     header match {
       case Some(header) => rzRepository.userWithPassword(header.username, header.password)
-      case _            => Option.empty[Account]
+      case _            => Option.empty[AccountWPassword]
     }
   }
 }
