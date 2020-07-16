@@ -73,7 +73,8 @@ class RzEntitiesRepository(db: Database) {
           """)
         .on("accountId" -> account.accountId, "repositoryId" -> repositoryId)
         .as(SqlParser.int("collaborator.role").singleOpt) match {
-        case Some(r)                                     => minimumLevel.role >= AccessLevel.fromRole(r).getOrElse(ViewAccess).role
+        case Some(r) =>
+          minimumLevel.role >= AccessLevel.fromRole(r).getOrElse(ViewAccess).role
         case None if repositoryOwner == account.username => true // owner have absolute access
         case None if repositoryOwner != account.username => false
       }
