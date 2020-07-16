@@ -88,8 +88,8 @@ class DefaultGitUploadPack(db: Database, owner: String, repoName: String) extend
   override protected def runTask(account: Account): Unit = {
     val repository = RzRepository(owner, repoName)
     rzRepository.repositoryId(owner, repository.name) match {
-      case Some(id) if rzRepository.doesAccountHaveAccess(id, owner, account, ViewAccess) => upload(repository)
-      case _                                                                              => ()
+      case Some(id) if rzRepository.accountHaveAccess(id, owner, account, ViewAccess) => upload(repository)
+      case _                                                                          => ()
     }
   }
 }
@@ -111,7 +111,7 @@ class DefaultGitReceivePack(db: Database, owner: String, repoName: String, baseU
   override protected def runTask(account: Account): Unit = {
     val repository = RzRepository(owner, repoName)
     rzRepository.repositoryId(owner, repository.name) match {
-      case Some(id) if rzRepository.doesAccountHaveAccess(id, owner, account, EditAccess) =>
+      case Some(id) if rzRepository.accountHaveAccess(id, owner, account, EditAccess) =>
         receivePack(repository, account)
       case _ => ()
     }

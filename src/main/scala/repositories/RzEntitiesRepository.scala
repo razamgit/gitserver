@@ -59,7 +59,7 @@ class RzEntitiesRepository(db: Database) {
         .as(sshKeyParser.*)
     }
 
-  def doesAccountHaveAccess(
+  def accountHaveAccess(
     repositoryId: Int,
     repositoryOwner: String,
     account: Account,

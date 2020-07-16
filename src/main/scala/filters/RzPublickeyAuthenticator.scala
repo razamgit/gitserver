@@ -29,14 +29,15 @@ class RzPublickeyAuthenticator(db: Database) extends PublickeyAuthenticator {
 
   private def authenticateLoginUser(userName: String, accountKey: PublicKey, session: ServerSession): Boolean = {
     val userKeys = rzRepository.sshKeysByUserName(userName)
-    val authKey  = userKeys.filter(key => PublicKeyConstructor.fromString(key.publicKey).getOrElse(None) == accountKey)
-    if (authKey.nonEmpty) {
-      logger.info(s"Authentication as ssh user ${userName} succeeded")
-      RzPublickeyAuthenticator.putAuthType(session, AccountWKey(userKeys.head.accountId, userName, authKey.head))
-      true
-    } else {
-      logger.info(s"authentication as ssh user ${userName} failed")
-      false
+    val authKeys = userKeys.filter(key => PublicKeyConstructor.fromString(key.publicKey).getOrElse(None) == accountKey)
+    authKeys.headOption match {
+      case Some(authKey) =>
+        logger.info(s"Authentication as ssh user $userName succeeded")
+        RzPublickeyAuthenticator.putAuthType(session, AccountWKey(userKeys.head.accountId, userName, authKey))
+        true
+      case _ =>
+        logger.info(s"authentication as ssh user $userName failed")
+        false
     }
   }
 }

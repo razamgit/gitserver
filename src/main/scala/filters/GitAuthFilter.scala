@@ -57,11 +57,11 @@ class GitAuthFilter extends Filter {
       case Array(_, repositoryOwner, repositoryName, _*) =>
         rzRepository.repositoryId(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
           case Some(repositoryId) =>
-            val account = authenticateByHeader(request.getHeader("Authorization"), settings)
+            val account            = authenticateByHeader(request.getHeader("Authorization"), settings)
             val minimumAccessLevel = if (isUpdating) EditAccess else ViewAccess
             account match {
               case Some(acc: AccountWPassword) =>
-                val execute = rzRepository.doesAccountHaveAccess(repositoryId, repositoryOwner, acc, minimumAccessLevel)
+                val execute = rzRepository.accountHaveAccess(repositoryId, repositoryOwner, acc, minimumAccessLevel)
                 if (execute) {
                   request.setAttribute(GitLiterals.UserName.toString, acc.username)
                   if (isUpdating) {
