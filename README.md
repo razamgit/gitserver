@@ -11,6 +11,11 @@ $ sbt
 > ~;jetty:stop;jetty:start
 ```
 
+```
+git clone http://localhost:8080/git/admin/test.git
+git clone ssh://admin@localhost:2200/admin/test.git # ssh
+```
+
 ## Build and Deploy
 
 Download [Jetty server](https://www.eclipse.org/jetty/download.html), unpack and set $JETTY_HOME.

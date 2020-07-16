@@ -1,6 +1,7 @@
 package models
 
 import javax.servlet.http.HttpServletRequest
+import scala.util.matching.Regex
 
 sealed trait GitUrl {
   def url: String
@@ -26,4 +27,27 @@ object GitPaths {
       case path if path.startsWith(GitUrl.ApiV3Orgs.url)  => path.substring(GitUrl.ApiV3Orgs.length)
       case path                                           => path
     }).split("/"))
+}
+
+sealed trait GitLiterals
+
+object GitLiterals {
+
+  /**
+   * Request key for the username which is used during Git repository access.
+   */
+  case object UserName extends GitLiterals {
+    override def toString: String = "USER_NAME"
+  }
+
+  /**
+   * Request key for the Lock key which is used during Git repository write access.
+   */
+  case object RepositoryLockKey extends GitLiterals {
+    override def toString: String = "REPOSITORY_LOCK_KEY"
+  }
+
+  case object GitCommandRegex extends GitLiterals {
+    val toRegex: Regex = """\Agit-(upload|receive)-pack '/([a-zA-Z0-9\-_.]+)/([a-zA-Z0-9\-\+_.]+).git'\Z""".r
+  }
 }

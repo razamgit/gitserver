@@ -1,10 +1,9 @@
 package git
 
-import java.io.File
-
+import filters.GitAuthFilter
 import javax.servlet.ServletConfig
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
-import models.{ AppConfig, BaseUrl, GitLiterals, GitPaths, RepositoryLock }
+import models._
 import org.eclipse.jgit.http.server.GitServlet
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib._
@@ -44,7 +43,7 @@ class GitRepositoryServlet extends GitServlet {
 
   private def withLockRepository[T](req: HttpServletRequest)(f: => T): T =
     if (req.getAttribute(GitLiterals.RepositoryLockKey.toString) != null) {
-      RepositoryLock.lock(req.getAttribute(GitLiterals.RepositoryLockKey.toString).asInstanceOf[String]) {
+      RzRepositoryLock.lock(req.getAttribute(GitLiterals.RepositoryLockKey.toString).asInstanceOf[String]) {
         f
       }
     } else {
@@ -53,10 +52,8 @@ class GitRepositoryServlet extends GitServlet {
 }
 
 class RzRepositoryResolver extends RepositoryResolver[HttpServletRequest] {
-  val appConfig: AppConfig = AppConfig.load
-
   override def open(req: HttpServletRequest, name: String): Repository =
-    new FileRepository(new File(appConfig.gitDirectory, name))
+    new FileRepository(RzRepository(name).path)
 
 }
 

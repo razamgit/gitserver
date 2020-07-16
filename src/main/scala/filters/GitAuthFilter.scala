@@ -1,10 +1,11 @@
-package git
+package filters
 
+import git.GitRepositoryServlet
 import javax.servlet._
 import javax.servlet.http._
-import models.{ AppConfig, AuthorizationHeader, Database, GitLiterals, GitPaths }
+import models._
 import org.slf4j.LoggerFactory
-import repositories.RzRepository
+import repositories.RzEntitiesRepository
 
 /**
  * Provides BASIC Authentication for [[GitRepositoryServlet]].
@@ -12,7 +13,7 @@ import repositories.RzRepository
 class GitAuthFilter extends Filter {
   val appConfig: AppConfig = AppConfig.load
   val db                   = new Database(appConfig.db)
-  val rzRepository         = new RzRepository(db)
+  val rzRepository         = new RzEntitiesRepository(db)
 
   private val logger = LoggerFactory.getLogger(classOf[GitAuthFilter])
 
@@ -54,28 +55,23 @@ class GitAuthFilter extends Filter {
   ): Unit =
     GitPaths(request).list match {
       case Array(_, repositoryOwner, repositoryName, _*) =>
-        rzRepository.getRepository(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
-          case Some(repository) =>
-            // Authentication is required
-            val passed = for {
-              authorizationHeader <- Option(request.getHeader("Authorization"))
-              accountUsername     <- authenticateByHeader(authorizationHeader, settings)
-            } yield
-              if (isUpdating) {
-                request.setAttribute(GitLiterals.UserName.toString, accountUsername)
-                request.setAttribute(GitLiterals.RepositoryLockKey.toString, s"$repositoryOwner/$repositoryName")
-                true
-              } else {
-                request.setAttribute(GitLiterals.UserName.toString, accountUsername)
-                true
-              }
-
-            val execute = passed.getOrElse(false)
-
-            if (execute) {
-              chain.doFilter(request, response)
-            } else {
-              requireAuth(response)
+        rzRepository.repositoryId(repositoryOwner, repositoryName.replaceFirst("(\\.wiki)?\\.git$", "")) match {
+          case Some(repositoryId) =>
+            val account            = authenticateByHeader(request.getHeader("Authorization"), settings)
+            val minimumAccessLevel = if (isUpdating) EditAccess else ViewAccess
+            account match {
+              case Some(acc: AccountWPassword) =>
+                val execute = rzRepository.accountHaveAccess(repositoryId, repositoryOwner, acc, minimumAccessLevel)
+                if (execute) {
+                  request.setAttribute(GitLiterals.UserName.toString, acc.username)
+                  if (isUpdating) {
+                    request.setAttribute(GitLiterals.RepositoryLockKey.toString, s"$repositoryOwner/$repositoryName")
+                  }
+                  chain.doFilter(request, response)
+                } else {
+                  requireAuth(response)
+                }
+              case _ => requireAuth(response)
             }
           case None => response.sendError(HttpServletResponse.SC_NOT_FOUND)
         }
@@ -91,12 +87,11 @@ class GitAuthFilter extends Filter {
    * @param settings            system settings
    * @return an account or none
    */
-  private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[String] = {
+  private def authenticateByHeader(authorizationHeader: String, settings: AppConfig): Option[AccountWPassword] = {
     val header = AuthorizationHeader(authorizationHeader)
     header match {
-      case Some(header) if rzRepository.isUserWithPasswordExists(header.username, header.password) =>
-        Some(header.username)
-      case _ => Option.empty[String]
+      case Some(header) => rzRepository.userWithPassword(header.username, header.password)
+      case _            => Option.empty[AccountWPassword]
     }
   }
 }
